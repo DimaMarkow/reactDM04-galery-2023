@@ -1,9 +1,10 @@
-import { Component } from 'react';
+import React from 'react';
 import getPictures from 'services/getPictures';
 import ErrorCard from '../ErrorCard/ErrorCard';
 import ImageGalleryItem from 'components/ImageGalleryItem/ImageGalleryItem';
 import Modal from 'components/Modal/Modal';
 import LoadMore from 'components/LoadMore/LoadMore';
+import { useState, useEffect } from 'react';
 
 const STATUS = {
   IDLE: 'idle',
@@ -12,81 +13,79 @@ const STATUS = {
   RESOLVED: 'resolved',
 };
 
-class ContentInfo extends Component {
-  state = {
-    images: [],
-    error: '',
-    status: STATUS.IDLE,
-    imageDetail: '',
-    showModal: false,
-    page: 1,
-  };
+const ContentInfo = ({ searchText }) => {
+  const [images, setImages] = useState([]);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState(STATUS.IDLE);
+  const [imageDetail, setImageDetail] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [page, setPage] = useState(1);
 
-  async componentDidUpdate(prevProps, prevState) {
-    if (prevProps.searchText !== this.props.searchText) {
-      this.setState({ page: 1, images: [] });
+  useEffect(() => {
+    if (searchText === '') return;
+    setPage(1);
+    setImages([]);
+    setStatus(STATUS.PENDING);
+    try {
+      fetchImagesFirstPage();
+    } catch (error) {
+      setError(error);
+      setStatus(STATUS.REJECTED);
     }
-    if (
-      prevProps.searchText !== this.props.searchText ||
-      prevState.page !== this.state.page
-    ) {
-      this.setState({ status: STATUS.PENDING });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText]);
+
+  useEffect(() => {
+    if (page !== 1) {
+      setStatus(STATUS.PENDING);
       try {
-        const newImages = await getPictures(
-          this.props.searchText,
-          this.state.page
-        );
-        this.setState(prevstate => ({
-          images: [...prevstate.images, ...newImages],
-          status: STATUS.RESOLVED,
-        }));
+        fetchImages();
       } catch (error) {
-        this.setState({ error, status: STATUS.REJECTED });
+        setError(error);
+        setStatus(STATUS.REJECTED);
       }
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
-  showImage = ({ largeImageURL }) => {
-    this.setState({
-      imageDetail: largeImageURL,
-      showModal: true,
-    });
+  const fetchImages = async () => {
+    const newImages = await getPictures(searchText, page);
+    setImages(prevImages => [...prevImages, ...newImages]);
+    setStatus(STATUS.RESOLVED);
   };
 
-  closeModal = () => {
-    this.setState({ showModal: false });
+  const fetchImagesFirstPage = async () => {
+    const newImages = await getPictures(searchText, 1);
+    setImages(prevImages => [...prevImages, ...newImages]);
+    setStatus(STATUS.RESOLVED);
   };
 
-  onLoadMore = () => {
-    this.setState(prevstate => ({
-      page: prevstate.page + 1,
-    }));
+  const showImage = ({ largeImageURL }) => {
+    setImageDetail(largeImageURL);
+    setShowModal(true);
   };
 
-  render() {
-    const { showModal, imageDetail, error } = this.state;
-    if (this.state.status === STATUS.PENDING)
-      return (
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      );
-    else if (this.state.status === STATUS.RESOLVED)
-      return (
-        <>
-          <ImageGalleryItem
-            images={this.state.images}
-            showImage={this.showImage}
-          />
-          <LoadMore onLoadMore={this.onLoadMore} />
-          {showModal && (
-            <Modal imageDetail={imageDetail} closeModal={this.closeModal} />
-          )}
-        </>
-      );
-    else if (this.state.status === STATUS.REJECTED)
-      return <ErrorCard>{error.response.data}</ErrorCard>;
-  }
-}
+  const closeModal = () => setShowModal(false);
+  const onLoadMore = () => setPage(prevPage => prevPage + 1);
+
+  if (status === STATUS.PENDING)
+    return (
+      <div className="spinner-border" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </div>
+    );
+  else if (status === STATUS.RESOLVED)
+    return (
+      <>
+        <ImageGalleryItem images={images} showImage={showImage} />
+        <LoadMore onLoadMore={onLoadMore} />
+        {showModal && (
+          <Modal imageDetail={imageDetail} closeModal={closeModal} />
+        )}
+      </>
+    );
+  else if (status === STATUS.REJECTED)
+    return <ErrorCard>{error.response.data}</ErrorCard>;
+};
 
 export default ContentInfo;

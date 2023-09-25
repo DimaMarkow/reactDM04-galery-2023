@@ -1,55 +1,44 @@
-import { Component } from 'react';
+import { useState } from 'react';
 import PropTypes from 'prop-types';
 
-const INITIAL_STATE = {
-  filter: '',
-};
-class Header extends Component {
-  state = {
-    ...INITIAL_STATE,
-  };
+import React from 'react';
 
-  handleChange = ({ target }) => {
-    this.setState({
-      [target.name]: target.value,
-    });
-  };
+const Header = ({ filterText, onFilterChange }) => {
+  const [filter, setFilter] = useState('');
 
-  handleSubmit = e => {
+  const handleChange = ({ target }) => setFilter(target.value);
+
+  const handleSubmit = e => {
     e.preventDefault();
-    this.props.onFilterChange(this.state.filter);
-    this.setState({
-      ...INITIAL_STATE,
-    });
+    onFilterChange(filter);
+    setFilter('');
   };
 
-  render() {
-    return (
-      <nav className="navbar navbar-expand-lg bg-body-tertiary">
-        <div className="container-fluid">
-          <a className="navbar-brand" href="https://www.google.com/">
-            Homework-DM-02-gallery
-          </a>
+  return (
+    <nav className="navbar navbar-expand-lg bg-body-tertiary">
+      <div className="container-fluid">
+        <a className="navbar-brand" href="https://www.google.com/">
+          Homework-DM-04-gallery with hooks
+        </a>
 
-          <form className="d-flex" role="search" onSubmit={this.handleSubmit}>
-            <input
-              className="form-control me-2"
-              type="search"
-              name="filter"
-              placeholder="Search"
-              aria-label="Search"
-              value={this.state.filter}
-              onChange={this.handleChange}
-            />
-            <button className="btn btn-outline-success" type="submit">
-              Search
-            </button>
-          </form>
-        </div>
-      </nav>
-    );
-  }
-}
+        <form className="d-flex" role="search" onSubmit={handleSubmit}>
+          <input
+            className="form-control me-2"
+            type="search"
+            name="filter"
+            placeholder="Search"
+            aria-label="Search"
+            value={filter}
+            onChange={handleChange}
+          />
+          <button className="btn btn-outline-success" type="submit">
+            Search
+          </button>
+        </form>
+      </div>
+    </nav>
+  );
+};
 
 export default Header;
 
